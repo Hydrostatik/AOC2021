@@ -1,8 +1,13 @@
 module Lib (
     dayOneSolutionIO
 ,   dayTwoSolutionIO
-,   getDisplacementProductFromMovementWithAim
+,   dayThreeSolutionIO
+,   oxygenGeneratorRating
+,   co2ScrubberRating
 ) where
+
+import Data.Char
+import Data.List
 
 compareVals :: (Num a, Ord a) => [a] -> a
 compareVals [] = 0
@@ -54,7 +59,7 @@ totalDisplacementProduct xs = uncurry (*) $ foldr ((\(x,y) (w,z) -> (x+w,y+z)) .
 
 totalDisplacementProductWithAim :: [Movement] -> Integer
 totalDisplacementProductWithAim xs = (\(x,y,_) -> x * y) . foldl (\(w,v,k) (x,y,z)  -> (x+w,x*k+v,z+k)) (0,0,0) $ map displace xs
-    where 
+    where
         displace (Forward x) = (x, 0, 0)
         displace (Up x) = (0, 0, -x)
         displace (Down x) = (0, 0, x)
@@ -66,7 +71,70 @@ getDisplacementProductFromMovementWithAim :: [String] -> Integer
 getDisplacementProductFromMovementWithAim = totalDisplacementProductWithAim . map parseToMovement
 
 dayTwoSolutionIO :: IO ()
-dayTwoSolutionIO = do 
+dayTwoSolutionIO = do
     input <- lines <$> readFile "input/DayTwoInput.txt"
     print $ getDisplacementProductFromMovement input
-    print $ getDisplacementProductFromMovementWithAim input 
+    print $ getDisplacementProductFromMovementWithAim input
+
+getMostFrequentBits :: [String] -> String
+getMostFrequentBits xs = map checkCommonality $ foldr (zipWith (+) . map digitToInt) (repeat 0) xs
+    where
+        sampleSize = ceiling $ (fromIntegral $ length xs :: Double) / 2.0
+        checkCommonality x =
+            if x >= sampleSize
+                then '1'
+                else '0'
+
+getLeastFrequentBits :: [String] -> String
+getLeastFrequentBits xs = map checkCommonality $ foldr (zipWith (+) . map digitToInt) (repeat 0) xs
+    where
+        sampleSize = ceiling $ (fromIntegral $ length xs :: Double) / 2.0
+        checkCommonality x =
+            if x >= sampleSize
+                then '0'
+                else '1'
+
+binary :: Integer -> Integer -> [Integer] -> Integer
+binary _ val [] = val
+binary acc val (x:xs) = binary (acc + 1) (2 ^ acc * x + val) xs
+
+binaryGenerator :: [Integer] -> Integer
+binaryGenerator = binary 0 0
+
+toBinary :: String -> Integer
+toBinary xs = binaryGenerator $ binaryFromString xs
+    where
+        binaryFromString = map (toInteger . digitToInt) . reverse
+
+powerConsumptionRate :: [String] -> Integer
+powerConsumptionRate xs = toBinary gamma * toBinary beta
+    where
+        gamma = getMostFrequentBits xs
+        beta = map (\x -> if x == '1' then '0' else '1') gamma
+
+oxygenGeneratorRating :: [String] -> Integer
+oxygenGeneratorRating = toBinary . algo 0
+    where
+        algo _ [] = ""
+        algo _ [x] = x
+        algo pos xs = algo (pos + 1) (filter (\x -> x !! pos == val) xs)
+            where
+                val = getMostFrequentBits xs !! pos
+
+co2ScrubberRating :: [String] -> Integer
+co2ScrubberRating = toBinary . algo 0
+    where
+        algo _ [] = ""
+        algo _ [x] = x
+        algo pos xs = algo (pos + 1) (filter (\x -> x !! pos == val) xs)
+            where
+                val = getLeastFrequentBits xs !! pos
+
+lifeSupportRating :: [String] -> Integer 
+lifeSupportRating xs = oxygenGeneratorRating xs * co2ScrubberRating xs
+
+dayThreeSolutionIO :: IO ()
+dayThreeSolutionIO = do
+    input <- lines <$> readFile "input/DayThreeInput.txt"
+    print $ powerConsumptionRate input
+    print $ lifeSupportRating input 
