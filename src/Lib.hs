@@ -2,12 +2,12 @@ module Lib (
     dayOneSolutionIO
 ,   dayTwoSolutionIO
 ,   dayThreeSolutionIO
-,   oxygenGeneratorRating
-,   co2ScrubberRating
+,   dayFourSolutionIO
 ) where
 
 import Data.Char
 import Data.List
+import qualified Data.Ord as O
 
 compareVals :: (Num a, Ord a) => [a] -> a
 compareVals [] = 0
@@ -130,11 +130,45 @@ co2ScrubberRating = toBinary . algo 0
             where
                 val = getLeastFrequentBits xs !! pos
 
-lifeSupportRating :: [String] -> Integer 
+lifeSupportRating :: [String] -> Integer
 lifeSupportRating xs = oxygenGeneratorRating xs * co2ScrubberRating xs
 
 dayThreeSolutionIO :: IO ()
 dayThreeSolutionIO = do
     input <- lines <$> readFile "input/DayThreeInput.txt"
     print $ powerConsumptionRate input
-    print $ lifeSupportRating input 
+    print $ lifeSupportRating input
+
+processBingoResult :: [Integer] -> [[Integer]] -> (Integer, Integer)
+processBingoResult draw board = (,) (toInteger numOfMoves + 1) score
+    where
+        possibleLines = transpose board <> board
+        numOfMoves = minimum $ map (\xs -> maximum $ findIndices (`elem` xs) draw) possibleLines
+        actualDraw = take (numOfMoves + 1) draw
+        score = last actualDraw * (sum . filter (`notElem` actualDraw) $ concat board)
+
+-- I want to win
+processBingoBoards :: [Integer] -> [[[Integer]]] -> Integer
+processBingoBoards draw boards = snd . minimumBy (O.comparing fst) $ map (processBingoResult draw) boards
+
+-- I want to lose
+processBingoBoards' :: [Integer] -> [[[Integer]]] -> Integer
+processBingoBoards' draw boards = snd . maximumBy (O.comparing fst) $ map (processBingoResult draw) boards
+
+dayFourSolutionIO :: IO ()
+dayFourSolutionIO = do
+    input <- lines <$> readFile "input/DayFourInput.txt"
+    let draw = stringToIntegers . map (\x -> if x == ',' then ' ' else x) $ head input
+    let boards =  (map . map) stringToIntegers $ matrixSplitter $ ignoreHeader input
+    print $ processBingoBoards draw boards 
+    print $ processBingoBoards' draw boards 
+        where
+            stringToIntegers = map (\x -> read x :: Integer). words
+            ignoreHeader = tail . tail
+            matrixSplitter [] = []
+            matrixSplitter input = fst m : matrixSplitter ((tail . snd) m)
+                where
+                    indexToSplit = elemIndex "" input
+                    splitMatrix (Just val) matrix = splitAt val matrix
+                    splitMatrix Nothing matrix = (matrix, [""])
+                    m = splitMatrix indexToSplit input 
