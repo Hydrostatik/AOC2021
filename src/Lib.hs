@@ -6,6 +6,7 @@ module Lib (
 ,   dayThreeSolutionIO
 ,   dayFourSolutionIO
 ,   dayFiveSolutionIO
+,   daySixSolutionIO
 ) where
 
 import Data.Char
@@ -212,3 +213,21 @@ dayFiveSolutionIO = do
         . map (\ x -> if x == ',' then ' ' else x) . filter (\ x -> x `notElem` ['-', '>']) <$> readFile "input/DayFiveInput.txt"
     print $ findAllIntersectingPointsNoDiag input
     print $ findAllIntersectingPoints input
+
+initialBucket :: M.Map Integer Integer
+initialBucket = M.fromList [(0,0), (1,0), (2,0), (3,0), (4,0), (5,0), (6,0), (7,0), (8,0)]
+
+lanternFishSpawningSim :: Integer -> M.Map Integer Integer -> Integer
+lanternFishSpawningSim 0 state = sum . map snd $ M.toList state
+lanternFishSpawningSim days state = lanternFishSpawningSim (days - 1) (M.adjustWithKey (\_ val -> val + numberReadyToSpawn) 8 $ M.adjustWithKey (\_ val -> val + numberReadyToSpawn) 6 (updateState state <> initialBucket))
+    where
+        updateState = M.mapKeys (\x -> if x == 0 then 6 else x - 1)
+        numberReadyToSpawn = state M.! 0
+        
+
+daySixSolutionIO :: IO ()
+daySixSolutionIO = do
+    input <- map (\x -> read x :: Integer) . words . map (\x -> if x == ',' then ' ' else x) <$> readFile "input/DaySixInput.txt"
+    let input' = M.fromListWith (+) (zip input (repeat 1)) <> initialBucket
+    print $ lanternFishSpawningSim 80 input'
+    print $ lanternFishSpawningSim 256 input'
