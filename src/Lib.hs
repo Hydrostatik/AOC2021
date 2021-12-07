@@ -1,13 +1,17 @@
+{-# LANGUAGE TupleSections #-}
+
 module Lib (
     dayOneSolutionIO
 ,   dayTwoSolutionIO
 ,   dayThreeSolutionIO
 ,   dayFourSolutionIO
+,   dayFiveSolutionIO
 ) where
 
 import Data.Char
 import Data.List
 import qualified Data.Ord as O
+import qualified Data.Map as M
 
 compareVals :: (Num a, Ord a) => [a] -> a
 compareVals [] = 0
@@ -160,8 +164,8 @@ dayFourSolutionIO = do
     input <- lines <$> readFile "input/DayFourInput.txt"
     let draw = stringToIntegers . map (\x -> if x == ',' then ' ' else x) $ head input
     let boards =  (map . map) stringToIntegers $ matrixSplitter $ ignoreHeader input
-    print $ processBingoBoards draw boards 
-    print $ processBingoBoards' draw boards 
+    print $ processBingoBoards draw boards
+    print $ processBingoBoards' draw boards
         where
             stringToIntegers = map (\x -> read x :: Integer). words
             ignoreHeader = tail . tail
@@ -171,4 +175,40 @@ dayFourSolutionIO = do
                     indexToSplit = elemIndex "" input
                     splitMatrix (Just val) matrix = splitAt val matrix
                     splitMatrix Nothing matrix = (matrix, [""])
-                    m = splitMatrix indexToSplit input 
+                    m = splitMatrix indexToSplit input
+
+lineCoords :: Bool -> (Integer, Integer) -> (Integer, Integer) -> [(Integer, Integer)]
+lineCoords eDiag start finish
+    | xCordSame = map (fst start,) $ getRange (snd start) (snd finish)
+    | yCordSame =  map (, snd start) $ getRange (fst start) (fst finish)
+    | strictDiag && eDiag = zip (getRange (fst start) (fst finish)) (getRange (snd start) (snd finish))
+    | otherwise = []
+    where
+        xCordSame = fst start == fst finish
+        yCordSame = snd start == snd finish
+        strictDiag = pi/4 == (atan2 (fromIntegral (abs (fst finish - fst start))) (fromIntegral (abs (snd finish - snd start))) :: Double)
+        getRange x y = if x <= y then [x..y] else [x,(x-1)..y]
+
+findAllCoordsNoDiag :: [((Integer, Integer), (Integer, Integer))] -> [(Integer, Integer)]
+findAllCoordsNoDiag = concatMap (uncurry $ lineCoords False)
+
+findAllCoords :: [((Integer, Integer), (Integer, Integer))] -> [(Integer, Integer)]
+findAllCoords = concatMap (uncurry $ lineCoords True)
+
+findIntersectingPoints :: Int -> [(Integer, Integer)] -> Integer
+findIntersectingPoints threshold coords = sum $ map (\x -> if snd x >= threshold then 1 else 0) (getDups coords)
+    where
+        getDups xs = M.toList $ M.fromListWith (+) (zip xs (repeat 1))
+
+findAllIntersectingPointsNoDiag :: [((Integer, Integer), (Integer, Integer))] -> Integer
+findAllIntersectingPointsNoDiag xs = findIntersectingPoints 2 (findAllCoordsNoDiag xs)
+
+findAllIntersectingPoints :: [((Integer, Integer), (Integer, Integer))] -> Integer
+findAllIntersectingPoints xs = findIntersectingPoints 2 (findAllCoords xs)
+
+dayFiveSolutionIO :: IO ()
+dayFiveSolutionIO = do
+    input <- fmap ((\x -> ((head x, x !! 1), (x !! 2, x !! 3))) . fmap (\x -> read x :: Integer) . words) . lines
+        . map (\ x -> if x == ',' then ' ' else x) . filter (\ x -> x `notElem` ['-', '>']) <$> readFile "input/DayFiveInput.txt"
+    print $ findAllIntersectingPointsNoDiag input
+    print $ findAllIntersectingPoints input
