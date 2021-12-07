@@ -7,6 +7,7 @@ module Lib (
 ,   dayFourSolutionIO
 ,   dayFiveSolutionIO
 ,   daySixSolutionIO
+,   daySevenSolutionIO
 ) where
 
 import Data.Char
@@ -223,7 +224,7 @@ lanternFishSpawningSim days state = lanternFishSpawningSim (days - 1) (M.adjustW
     where
         updateState = M.mapKeys (\x -> if x == 0 then 6 else x - 1)
         numberReadyToSpawn = state M.! 0
-        
+
 
 daySixSolutionIO :: IO ()
 daySixSolutionIO = do
@@ -231,3 +232,26 @@ daySixSolutionIO = do
     let input' = M.fromListWith (+) (zip input (repeat 1)) <> initialBucket
     print $ lanternFishSpawningSim 80 input'
     print $ lanternFishSpawningSim 256 input'
+
+crabLeastFuelConsumed :: [Integer] -> Integer
+crabLeastFuelConsumed xs = minimum . map snd . M.toList $ M.mapWithKey (\k _ -> (sum . map (\x -> abs (x - k))) xs) uniquePositions
+    where
+        minVal = minimum xs
+        maxVal = maximum xs
+        uniquePositions = M.fromList $ zip [minVal..maxVal] (repeat 0)
+
+crabLeastFuelConsumed' :: [Integer] -> Integer
+crabLeastFuelConsumed' xs = minimum . map snd . M.toList $ M.mapWithKey (\k _ -> (sum . map (`sumAlgo` k)) xs) uniquePositions
+    where
+        minVal = minimum xs
+        maxVal = maximum xs
+        uniquePositions = M.fromList $ zip [minVal..maxVal] (repeat 0)
+        sumAlgo k x = absVal * (absVal + 1) `div` 2
+            where
+                absVal = abs (x - k)
+
+daySevenSolutionIO :: IO ()
+daySevenSolutionIO = do
+    input <- map (\x -> read x :: Integer) . words . map (\x -> if x == ',' then ' ' else x) <$> readFile "input/DaySevenInput.txt"
+    print $ crabLeastFuelConsumed input
+    print $ crabLeastFuelConsumed' input
