@@ -8,6 +8,8 @@ module Lib (
 ,   dayFiveSolutionIO
 ,   daySixSolutionIO
 ,   daySevenSolutionIO
+,   dayEightSolutionIO
+,   parseDigits
 ) where
 
 import Data.Char
@@ -255,3 +257,38 @@ daySevenSolutionIO = do
     input <- map (\x -> read x :: Integer) . words . map (\x -> if x == ',' then ' ' else x) <$> readFile "input/DaySevenInput.txt"
     print $ crabLeastFuelConsumed input
     print $ crabLeastFuelConsumed' input
+
+findDigitOccurrence :: [String] -> Integer
+findDigitOccurrence = sum . map (\x -> (\y -> if y `elem` [2,4,3,7] then 1 else 0) . toInteger . M.size . M.fromList $ zip x x)
+
+parseDigits :: [String] -> [String]
+parseDigits xs = [zero, one, two, three, four, five, six, seven, eight, nine]
+    where
+        xs' = map sort xs
+        one = sort $ head $ filter (\x -> length x == 2) xs'
+        four = sort $ head $ filter (\x -> length x == 4) xs'
+        seven = sort $ head $ filter (\x -> length x == 3) xs'
+        eight = sort $ head $ filter (\x -> length x == 7) xs'
+        knownSegments = map fst $ M.toList . M.fromList $ zip (seven <> four) (repeat 0)
+        two = sort $ head $ filter (\x -> length x == 5 && length (filter (`notElem` knownSegments) x) == 2) xs'
+        nine = sort $ head $ filter (\x -> length x == 6 && length (filter (`notElem` knownSegments) x) == 1) xs'
+        segment = filter (`notElem` nine) eight
+        three = map fst $ M.toList . M.fromList $ zip (filter (`notElem` segment) two <> one) (repeat 0)
+        five = sort $ head $ filter (\x -> (x `notElem` [two, three]) && length x == 5) xs'
+        six = sort $ five <> segment
+        zero =  sort $ head $ filter (\x -> (x `notElem` [six, nine]) && length x == 6) xs'
+
+getResultOfJumbledInput :: String -> String -> Integer
+getResultOfJumbledInput keys toDecode = (\x -> read x:: Integer) $ concatMap (\x -> show $ dict M.! x) sortedKeys
+    where 
+        dict = M.fromList $ zip (parseDigits $ words toDecode) [0..] 
+        sortedKeys = map sort (words keys)
+
+dayEightSolutionIO :: IO ()
+dayEightSolutionIO = do
+    input <- lines <$> readFile "input/DayEightInput.txt"
+    let input' = concatMap (words . tail . dropWhile (/='|')) input
+    let input'' = takeWhile (/='|') <$> input
+    let input''' = tail . dropWhile (/='|') <$> input
+    print $ findDigitOccurrence input'
+    print $ sum $ zipWith getResultOfJumbledInput input''' input''
